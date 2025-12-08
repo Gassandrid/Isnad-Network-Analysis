@@ -26,16 +26,18 @@ export function NetworkGraph({
   forceConfig,
 }: NetworkGraphProps) {
   const graphRef = useRef<any>()
+  const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
+  const [hoveredNode, setHoveredNode] = useState<string | number | null>(null)
   const lastInteractionRef = useRef<number>(Date.now())
   const slowdownTimerRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     const updateDimensions = () => {
-      setDimensions({
-        width: window.innerWidth - 400,
-        height: window.innerHeight - 100,
-      })
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect()
+        setDimensions({ width, height })
+      }
     }
     updateDimensions()
     window.addEventListener("resize", updateDimensions)
@@ -65,12 +67,10 @@ export function NetworkGraph({
         // After 3 seconds of no interaction, slow down significantly
         fg.d3Force("charge")?.strength(forceConfig.charge * 0.1)
         fg.d3Force("link")?.strength(0.05)
-        fg.d3AlphaDecay(0.1) // Slow decay
       } else {
         // Active interaction - normal forces
         fg.d3Force("charge")?.strength(forceConfig.charge)
         fg.d3Force("link")?.strength(1)
-        fg.d3AlphaDecay(0.02)
       }
     }
 
@@ -88,8 +88,23 @@ export function NetworkGraph({
       const fg = graphRef.current
       fg.d3Force("charge")?.strength(forceConfig.charge)
       fg.d3Force("link")?.strength(1)
-      fg.d3AlphaDecay(0.02)
     }
+  }
+
+  // Get neighbor nodes
+  const getNeighbors = (nodeId: string | number) => {
+    const neighbors = new Set<string>()
+    const id = String(nodeId)
+
+    links.forEach((link) => {
+      const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
+      const targetId = String(typeof link.target === "object" ? link.target.id : link.target)
+
+      if (sourceId === id) neighbors.add(targetId)
+      if (targetId === id) neighbors.add(sourceId)
+    })
+
+    return neighbors
   }
 
   const getNodeColor = (node: Narrator) => {
@@ -104,6 +119,19 @@ export function NetworkGraph({
     // Selected node uses secondary color
     if (String(selectedNarrator) === nodeId) {
       return isDark ? "#c59b8d" : "#a67c6d"
+    }
+
+    // Hovered node
+    if (hoveredNode && String(hoveredNode) === nodeId) {
+      return isDark ? "#e8c4b8" : "#8a5a4a"
+    }
+
+    // Neighbor of hovered node
+    if (hoveredNode) {
+      const neighbors = getNeighbors(hoveredNode)
+      if (neighbors.has(nodeId)) {
+        return isDark ? "#a88b7f" : "#b39080"
+      }
     }
 
     if (isDark) {
@@ -125,6 +153,15 @@ export function NetworkGraph({
     if (sourceIndex !== -1 && targetIndex !== -1 && Math.abs(sourceIndex - targetIndex) === 1) {
       const isDark = document.documentElement.classList.contains("dark")
       return isDark ? "#c59b8d" : "#a67c6d" // secondary color
+    }
+
+    // Highlight edges connected to hovered node
+    if (hoveredNode) {
+      const hoveredStr = String(hoveredNode)
+      if (sourceId === hoveredStr || targetId === hoveredStr) {
+        const isDark = document.documentElement.classList.contains("dark")
+        return isDark ? "#a88b7f" : "#b39080"
+      }
     }
 
     const isDark = document.documentElement.classList.contains("dark")
@@ -191,7 +228,7 @@ export function NetworkGraph({
   }
 
   return (
-    <div className="relative w-full h-full rounded-lg overflow-hidden border border-border bg-card">
+    <div ref={containerRef} className="relative w-full h-full rounded-lg overflow-hidden border border-border bg-card">
       <ForceGraph2D
         ref={graphRef}
         graphData={{ nodes, links }}
@@ -207,6 +244,7 @@ export function NetworkGraph({
         linkDirectionalParticleWidth={3}
         linkDirectionalParticleSpeed={0.006}
         onNodeClick={(node: any) => onNodeClick?.(node)}
+        onNodeHover={(node: any) => setHoveredNode(node?.id || null)}
         onNodeDrag={handleInteraction}
         onNodeDragEnd={handleInteraction}
         cooldownTicks={50}

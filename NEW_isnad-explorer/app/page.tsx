@@ -12,6 +12,7 @@ import { mockNetworkData } from "@/lib/mock-data"
 import { loadNetworkData } from "@/lib/data-loader"
 import type { Narrator, Hadith, NetworkData, ForceConfig } from "@/types/network"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Network, BookOpen, BarChart3, Loader2 } from "lucide-react"
 
 export default function Page() {
@@ -66,8 +67,8 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      <header className="border-b border-border bg-card flex-shrink-0">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -81,10 +82,10 @@ export default function Page() {
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-6">
-        <div className="flex gap-6">
-          <aside className="w-80 space-y-6 flex-shrink-0">
-            <div className="flex gap-2">
+      <div className="flex-1 flex overflow-hidden">
+        <div className="container mx-auto px-6 py-6 flex gap-6 overflow-hidden">
+          <aside className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-hidden">
+            <div className="flex gap-2 flex-shrink-0">
               <Button
                 variant={activeView === "network" ? "default" : "outline"}
                 className="flex-1"
@@ -111,31 +112,39 @@ export default function Page() {
               </Button>
             </div>
 
-            <ForceControls config={forceConfig} onChange={setForceConfig} />
+            <div className="flex-shrink-0">
+              <ForceControls config={forceConfig} onChange={setForceConfig} />
+            </div>
 
-            {activeView === "search" && (
-              <HadithSearch hadiths={networkData.hadiths} onSelectHadith={handleHadithSelect} />
-            )}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {activeView === "search" && (
+                <ScrollArea className="h-full">
+                  <HadithSearch hadiths={networkData.hadiths} onSelectHadith={handleHadithSelect} />
+                </ScrollArea>
+              )}
 
-            {activeView === "stats" && <StatsPanel data={networkData} />}
+              {activeView === "stats" && (
+                <ScrollArea className="h-full">
+                  <StatsPanel data={networkData} />
+                </ScrollArea>
+              )}
 
-            {activeView === "network" && selectedNarrator && (
-              <NarratorPanel narrator={selectedNarrator} onClose={() => setSelectedNarrator(null)} />
-            )}
+              {activeView === "network" && selectedNarrator && (
+                <NarratorPanel narrator={selectedNarrator} onClose={() => setSelectedNarrator(null)} />
+              )}
 
-            {selectedHadith && <HadithPath hadith={selectedHadith} onClose={() => setSelectedHadith(null)} />}
-
-            {activeView === "network" && !selectedNarrator && !selectedHadith && (
-              <div className="p-6 border border-border rounded-lg bg-card text-center space-y-2">
-                <Network className="h-12 w-12 mx-auto text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Click on a narrator node to view details or search for a hadith to trace its path.
-                </p>
-              </div>
-            )}
+              {activeView === "network" && !selectedNarrator && !selectedHadith && (
+                <div className="p-6 border border-border rounded-lg bg-card text-center space-y-2">
+                  <Network className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Click on a narrator node to view details or search for a hadith to trace its path.
+                  </p>
+                </div>
+              )}
+            </div>
           </aside>
 
-          <main className="flex-1">
+          <main className="flex-1 overflow-hidden">
             <NetworkGraph
               nodes={networkData.nodes}
               links={networkData.links}
@@ -147,6 +156,8 @@ export default function Page() {
           </main>
         </div>
       </div>
+
+      {selectedHadith && <HadithPath hadith={selectedHadith} onClose={() => setSelectedHadith(null)} />}
     </div>
   )
 }

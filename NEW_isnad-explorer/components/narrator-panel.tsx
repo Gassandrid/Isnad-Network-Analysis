@@ -26,18 +26,19 @@ export function NarratorPanel({ narrator, onClose }: NarratorPanelProps) {
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
+    <Card className="w-full h-full flex flex-col overflow-hidden">
+      <CardHeader className="flex-shrink-0 pb-3">
         <div className="flex items-start justify-between">
-          <div className="space-y-1">
+          <div className="space-y-1 flex-1 min-w-0">
             <CardTitle className="text-lg leading-relaxed">{narrator.name}</CardTitle>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
             <X className="h-4 w-4" />
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <div className="flex-1 overflow-y-auto px-6">
+        <div className="space-y-4 pb-6">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Grade / Reliability</p>
           <Badge className={getGradeColor(narrator.grade)}>{narrator.grade || "Unknown"}</Badge>
@@ -113,7 +114,8 @@ export function NarratorPanel({ narrator, onClose }: NarratorPanelProps) {
             </div>
           </div>
         )}
-      </CardContent>
+        </div>
+      </div>
     </Card>
   )
 }
