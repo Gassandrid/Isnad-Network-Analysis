@@ -30,9 +30,9 @@ export function ForceControls({ config, onChange }: ForceControlsProps) {
           <Slider
             value={[config.charge]}
             onValueChange={([value]) => updateConfig("charge", value)}
-            min={-500}
+            min={-800}
             max={-50}
-            step={10}
+            step={25}
             className="w-full"
           />
         </div>
@@ -45,9 +45,9 @@ export function ForceControls({ config, onChange }: ForceControlsProps) {
           <Slider
             value={[config.linkDistance]}
             onValueChange={([value]) => updateConfig("linkDistance", value)}
-            min={10}
-            max={200}
-            step={5}
+            min={30}
+            max={250}
+            step={10}
             className="w-full"
           />
         </div>

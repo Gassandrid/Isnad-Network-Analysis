@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo, useCallback } from "react"
 import dynamic from "next/dynamic"
 import type { Narrator, Link, ForceConfig } from "@/types/network"
 
@@ -29,8 +29,6 @@ export function NetworkGraph({
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [hoveredNode, setHoveredNode] = useState<string | number | null>(null)
-  const lastInteractionRef = useRef<number>(Date.now())
-  const slowdownTimerRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -44,70 +42,54 @@ export function NetworkGraph({
     return () => window.removeEventListener("resize", updateDimensions)
   }, [])
 
+  // Apply forces on mount and when config changes (debounced to avoid constant reheating)
   useEffect(() => {
-    if (graphRef.current) {
-      const fg = graphRef.current
+    const applyForces = () => {
+      if (graphRef.current) {
+        const fg = graphRef.current
 
-      fg.d3Force("charge")?.strength(forceConfig.charge)
-      fg.d3Force("link")?.distance(forceConfig.linkDistance)
-      fg.d3Force("center")?.strength(forceConfig.centerStrength)
-      fg.d3Force("collide")?.radius(forceConfig.collisionRadius)
-    }
-  }, [forceConfig])
-
-  // Gradually slow down simulation when user is idle
-  useEffect(() => {
-    const checkAndSlowDown = () => {
-      if (!graphRef.current) return
-
-      const timeSinceInteraction = Date.now() - lastInteractionRef.current
-      const fg = graphRef.current
-
-      if (timeSinceInteraction > 3000) {
-        // After 3 seconds of no interaction, slow down significantly
-        fg.d3Force("charge")?.strength(forceConfig.charge * 0.1)
-        fg.d3Force("link")?.strength(0.05)
-      } else {
-        // Active interaction - normal forces
         fg.d3Force("charge")?.strength(forceConfig.charge)
-        fg.d3Force("link")?.strength(1)
+        fg.d3Force("link")?.distance(forceConfig.linkDistance).strength(0.2)
+        fg.d3Force("center")?.strength(forceConfig.centerStrength)
+        fg.d3Force("collide")?.radius(forceConfig.collisionRadius).strength(1)
+
+        // Reheat the simulation when forces change to recalculate positions
+        fg.d3ReheatSimulation()
+
+        console.log("[Graph] Applied forces:", {
+          charge: forceConfig.charge,
+          linkDistance: forceConfig.linkDistance,
+          linkStrength: 0.2,
+          centerStrength: forceConfig.centerStrength
+        })
       }
     }
 
-    slowdownTimerRef.current = setInterval(checkAndSlowDown, 1000)
-    return () => {
-      if (slowdownTimerRef.current) clearInterval(slowdownTimerRef.current)
-    }
+    // Debounce force application to avoid constant reheating while dragging sliders
+    const timer = setTimeout(applyForces, 200)
+    return () => clearTimeout(timer)
   }, [forceConfig])
 
-  const handleInteraction = () => {
-    lastInteractionRef.current = Date.now()
-    if (graphRef.current) {
-      // Reheat the simulation on interaction
-      graphRef.current.d3ReheatSimulation()
-      const fg = graphRef.current
-      fg.d3Force("charge")?.strength(forceConfig.charge)
-      fg.d3Force("link")?.strength(1)
-    }
-  }
 
-  // Get neighbor nodes
-  const getNeighbors = (nodeId: string | number) => {
-    const neighbors = new Set<string>()
-    const id = String(nodeId)
+  // Memoize neighbor map for better performance
+  const neighborMap = useMemo(() => {
+    const map = new Map<string, Set<string>>()
 
     links.forEach((link) => {
       const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
       const targetId = String(typeof link.target === "object" ? link.target.id : link.target)
 
-      if (sourceId === id) neighbors.add(targetId)
-      if (targetId === id) neighbors.add(sourceId)
+      if (!map.has(sourceId)) map.set(sourceId, new Set())
+      if (!map.has(targetId)) map.set(targetId, new Set())
+
+      map.get(sourceId)!.add(targetId)
+      map.get(targetId)!.add(sourceId)
     })
 
-    return neighbors
-  }
+    return map
+  }, [links])
 
-  const getNodeColor = (node: Narrator) => {
+  const getNodeColor = useCallback((node: Narrator) => {
     const isDark = document.documentElement.classList.contains("dark")
     const nodeId = String(node.id)
 
@@ -128,8 +110,8 @@ export function NetworkGraph({
 
     // Neighbor of hovered node
     if (hoveredNode) {
-      const neighbors = getNeighbors(hoveredNode)
-      if (neighbors.has(nodeId)) {
+      const neighbors = neighborMap.get(String(hoveredNode))
+      if (neighbors?.has(nodeId)) {
         return isDark ? "#a88b7f" : "#b39080"
       }
     }
@@ -138,9 +120,9 @@ export function NetworkGraph({
       return "#6b6158" // gray from dark mode palette
     }
     return "#9a8f82" // gray from light mode palette
-  }
+  }, [hoveredNode, highlightedPath, selectedNarrator, neighborMap])
 
-  const getLinkColor = (link: any) => {
+  const getLinkColor = useCallback((link: any) => {
     const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
     const targetId = String(typeof link.target === "object" ? link.target.id : link.target)
 
@@ -166,7 +148,7 @@ export function NetworkGraph({
 
     const isDark = document.documentElement.classList.contains("dark")
     return isDark ? "#2a2520" : "#e6dfd6" // very light links
-  }
+  }, [hoveredNode, highlightedPath])
 
   const getLinkWidth = (link: any) => {
     const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
@@ -191,15 +173,13 @@ export function NetworkGraph({
     const targetIndex = pathStr.indexOf(targetId)
 
     if (sourceIndex !== -1 && targetIndex !== -1 && Math.abs(sourceIndex - targetIndex) === 1) {
-      return 4 // Show flowing particles on path
+      return 2 // Reduced particles for performance
     }
     return 0
   }
 
-  const paintNode = (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const label = node.name
-    const fontSize = 14 / globalScale // Increased from 12 to 14
-    const nodeRadius = Math.sqrt(Math.max((node.pagerank || 0.001) * 1000, 3)) * 6 // Reduced from 8 to 6
+  const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const nodeRadius = Math.sqrt(Math.max((node.pagerank || 0.001) * 1000, 3)) * 6
 
     // Draw node circle
     ctx.beginPath()
@@ -207,25 +187,26 @@ export function NetworkGraph({
     ctx.fillStyle = getNodeColor(node)
     ctx.fill()
 
-    // Only show labels when zoomed in enough (globalScale > 1.5)
-    if (globalScale > 1.5) {
+    // Only show labels when zoomed in enough (globalScale > 2)
+    if (globalScale > 2) {
+      const fontSize = 14 / globalScale
       ctx.font = `${fontSize}px Inter, system-ui, sans-serif`
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
 
       const isDark = document.documentElement.classList.contains("dark")
       ctx.fillStyle = isDark ? "#ebe7e1" : "#2d2520"
-      ctx.fillText(label, node.x, node.y + nodeRadius + fontSize)
+      ctx.fillText(node.name, node.x, node.y + nodeRadius + fontSize)
     }
-  }
+  }, [getNodeColor])
 
-  const nodePointerAreaPaint = (node: any, color: string, ctx: CanvasRenderingContext2D) => {
+  const nodePointerAreaPaint = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
     const nodeRadius = Math.sqrt(Math.max((node.pagerank || 0.001) * 1000, 3)) * 6
     ctx.beginPath()
     ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI, false)
     ctx.fillStyle = color
     ctx.fill()
-  }
+  }, [])
 
   return (
     <div ref={containerRef} className="relative w-full h-full rounded-lg overflow-hidden border border-border bg-card">
@@ -236,7 +217,7 @@ export function NetworkGraph({
         height={dimensions.height}
         nodeLabel={(node: any) => `${node.name}`}
         nodeCanvasObject={paintNode}
-        nodeCanvasObjectMode={() => "replace"}
+        nodeCanvasObjectMode={useCallback(() => "replace", [])}
         nodePointerAreaPaint={nodePointerAreaPaint}
         linkColor={getLinkColor}
         linkWidth={getLinkWidth}
@@ -244,12 +225,15 @@ export function NetworkGraph({
         linkDirectionalParticleWidth={3}
         linkDirectionalParticleSpeed={0.006}
         onNodeClick={(node: any) => onNodeClick?.(node)}
-        onNodeHover={(node: any) => setHoveredNode(node?.id || null)}
-        onNodeDrag={handleInteraction}
-        onNodeDragEnd={handleInteraction}
+        onNodeHover={(node: any) => {
+          setHoveredNode(node?.id || null)
+        }}
+        onNodeDrag={(node: any) => {}}
+        onNodeDragEnd={(node: any) => {}}
         cooldownTicks={50}
-        d3AlphaDecay={0.05}
-        d3VelocityDecay={0.4}
+        d3AlphaDecay={0.02}
+        d3VelocityDecay={0.3}
+        d3AlphaMin={0.001}
         warmupTicks={0}
         enableNodeDrag={true}
         enableZoomInteraction={true}

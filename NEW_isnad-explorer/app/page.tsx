@@ -22,9 +22,9 @@ export default function Page() {
   const [networkData, setNetworkData] = useState<NetworkData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [forceConfig, setForceConfig] = useState<ForceConfig>({
-    charge: -500,
-    linkDistance: 150,
-    centerStrength: 0.1,
+    charge: -300,
+    linkDistance: 100,
+    centerStrength: 0.2,
     collisionRadius: 20,
   })
 

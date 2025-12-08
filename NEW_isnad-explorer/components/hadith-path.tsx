@@ -16,7 +16,7 @@ export function HadithPath({ hadith, onClose }: HadithPathProps) {
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
       <div className="absolute inset-0 pointer-events-auto" onClick={onClose} />
-      <Card className="absolute left-0 top-0 bottom-0 w-[500px] h-full flex flex-col shadow-2xl pointer-events-auto rounded-none border-l-0">
+      <Card className="absolute left-0 top-0 bottom-0 w-[500px] h-full flex flex-col shadow-2xl pointer-events-auto rounded-none border-l-0 overflow-hidden">
         <CardHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
             <CardTitle>Hadith Transmission Path</CardTitle>
@@ -25,8 +25,8 @@ export function HadithPath({ hadith, onClose }: HadithPathProps) {
             </Button>
           </div>
         </CardHeader>
-        <ScrollArea className="flex-1">
-          <CardContent className="space-y-4 pb-6">
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <CardContent className="space-y-4 pb-6 pr-4">
         <div className="space-y-2">
           <p className="text-base leading-relaxed">{hadith.text_en}</p>
           {hadith.text_ar && (
