@@ -42,7 +42,7 @@ export function NetworkGraph({
     return () => window.removeEventListener("resize", updateDimensions)
   }, [])
 
-  // Apply forces on mount and when config changes (debounced to avoid constant reheating)
+  // Apply forces on mount and when config changes (debounced for smooth transitions)
   useEffect(() => {
     const applyForces = () => {
       if (graphRef.current) {
@@ -53,8 +53,7 @@ export function NetworkGraph({
         fg.d3Force("center")?.strength(forceConfig.centerStrength)
         fg.d3Force("collide")?.radius(forceConfig.collisionRadius).strength(1)
 
-        // Reheat the simulation when forces change to recalculate positions
-        fg.d3ReheatSimulation()
+        // Don't reheat - let simulation continue with current velocity for smooth transitions
 
         console.log("[Graph] Applied forces:", {
           charge: forceConfig.charge,
@@ -65,11 +64,14 @@ export function NetworkGraph({
       }
     }
 
-    // Debounce force application to avoid constant reheating while dragging sliders
+    // Debounce force application for smoother slider interactions
     const timer = setTimeout(applyForces, 200)
     return () => clearTimeout(timer)
   }, [forceConfig])
 
+
+  // Memoize graph data to prevent object recreation on every render
+  const graphData = useMemo(() => ({ nodes, links }), [nodes, links])
 
   // Memoize neighbor map for better performance
   const neighborMap = useMemo(() => {
@@ -150,7 +152,7 @@ export function NetworkGraph({
     return isDark ? "#2a2520" : "#e6dfd6" // very light links
   }, [hoveredNode, highlightedPath])
 
-  const getLinkWidth = (link: any) => {
+  const getLinkWidth = useCallback((link: any) => {
     const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
     const targetId = String(typeof link.target === "object" ? link.target.id : link.target)
 
@@ -162,9 +164,9 @@ export function NetworkGraph({
       return 4 // Thicker for highlighted path
     }
     return Math.sqrt(link.weight || 1) * 0.5
-  }
+  }, [highlightedPath])
 
-  const getLinkParticles = (link: any) => {
+  const getLinkParticles = useCallback((link: any) => {
     const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
     const targetId = String(typeof link.target === "object" ? link.target.id : link.target)
 
@@ -176,7 +178,7 @@ export function NetworkGraph({
       return 2 // Reduced particles for performance
     }
     return 0
-  }
+  }, [highlightedPath])
 
   const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const nodeRadius = Math.sqrt(Math.max((node.pagerank || 0.001) * 1000, 3)) * 6
@@ -208,14 +210,16 @@ export function NetworkGraph({
     ctx.fill()
   }, [])
 
+  const nodeLabel = useCallback((node: any) => `${node.name}`, [])
+
   return (
     <div ref={containerRef} className="relative w-full h-full rounded-lg overflow-hidden border border-border bg-card">
       <ForceGraph2D
         ref={graphRef}
-        graphData={{ nodes, links }}
+        graphData={graphData}
         width={dimensions.width}
         height={dimensions.height}
-        nodeLabel={(node: any) => `${node.name}`}
+        nodeLabel={nodeLabel}
         nodeCanvasObject={paintNode}
         nodeCanvasObjectMode={useCallback(() => "replace", [])}
         nodePointerAreaPaint={nodePointerAreaPaint}
@@ -230,10 +234,10 @@ export function NetworkGraph({
         }}
         onNodeDrag={(node: any) => {}}
         onNodeDragEnd={(node: any) => {}}
-        cooldownTicks={50}
-        d3AlphaDecay={0.02}
-        d3VelocityDecay={0.3}
-        d3AlphaMin={0.001}
+        cooldownTicks={300}
+        d3AlphaDecay={0.005}
+        d3VelocityDecay={0.2}
+        d3AlphaMin={0.0005}
         warmupTicks={0}
         enableNodeDrag={true}
         enableZoomInteraction={true}
