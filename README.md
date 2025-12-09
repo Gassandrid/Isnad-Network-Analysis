@@ -3,3 +3,9 @@
 A very simple next js frontend for an internal network analysis I did, this was for my Intro to Islam final.
 
 Very cool!
+
+Both dataset are from **KAggle**:
+
+[Narrators](https://www.kaggle.com/datasets/fahd09/hadith-narrators?select=all_rawis.csv)
+
+[Hadiths](https://www.kaggle.com/datasets/fahd09/hadith-dataset)
