@@ -91,12 +91,16 @@ export function NetworkGraph({
     return map
   }, [links])
 
+  // Memoize highlighted path as strings and as a Set for O(1) lookups
+  const highlightedPathStr = useMemo(() => highlightedPath.map(String), [highlightedPath])
+  const highlightedPathSet = useMemo(() => new Set(highlightedPathStr), [highlightedPathStr])
+
   const getNodeColor = useCallback((node: Narrator) => {
     const isDark = document.documentElement.classList.contains("dark")
     const nodeId = String(node.id)
 
-    // Highlighted path uses secondary color
-    if (highlightedPath.map(String).includes(nodeId)) {
+    // Highlighted path uses secondary color (O(1) Set lookup)
+    if (highlightedPathSet.has(nodeId)) {
       return isDark ? "#c59b8d" : "#a67c6d"
     }
 
@@ -122,19 +126,21 @@ export function NetworkGraph({
       return "#6b6158" // gray from dark mode palette
     }
     return "#9a8f82" // gray from light mode palette
-  }, [hoveredNode, highlightedPath, selectedNarrator, neighborMap])
+  }, [hoveredNode, highlightedPathSet, selectedNarrator, neighborMap])
+
+  // Helper to check if a link is part of the highlighted path
+  const isLinkInPath = useCallback((sourceId: string, targetId: string) => {
+    const sourceIndex = highlightedPathStr.indexOf(sourceId)
+    const targetIndex = highlightedPathStr.indexOf(targetId)
+    return sourceIndex !== -1 && targetIndex !== -1 && Math.abs(sourceIndex - targetIndex) === 1
+  }, [highlightedPathStr])
 
   const getLinkColor = useCallback((link: any) => {
     const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
     const targetId = String(typeof link.target === "object" ? link.target.id : link.target)
 
-    // Check if both nodes are in the highlighted path
-    const pathStr = highlightedPath.map(String)
-    const sourceIndex = pathStr.indexOf(sourceId)
-    const targetIndex = pathStr.indexOf(targetId)
-
     // Link is part of path if both nodes exist and are adjacent in the path
-    if (sourceIndex !== -1 && targetIndex !== -1 && Math.abs(sourceIndex - targetIndex) === 1) {
+    if (isLinkInPath(sourceId, targetId)) {
       const isDark = document.documentElement.classList.contains("dark")
       return isDark ? "#c59b8d" : "#a67c6d" // secondary color
     }
@@ -150,35 +156,27 @@ export function NetworkGraph({
 
     const isDark = document.documentElement.classList.contains("dark")
     return isDark ? "#2a2520" : "#e6dfd6" // very light links
-  }, [hoveredNode, highlightedPath])
+  }, [hoveredNode, isLinkInPath])
 
   const getLinkWidth = useCallback((link: any) => {
     const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
     const targetId = String(typeof link.target === "object" ? link.target.id : link.target)
 
-    const pathStr = highlightedPath.map(String)
-    const sourceIndex = pathStr.indexOf(sourceId)
-    const targetIndex = pathStr.indexOf(targetId)
-
-    if (sourceIndex !== -1 && targetIndex !== -1 && Math.abs(sourceIndex - targetIndex) === 1) {
+    if (isLinkInPath(sourceId, targetId)) {
       return 4 // Thicker for highlighted path
     }
     return Math.sqrt(link.weight || 1) * 0.5
-  }, [highlightedPath])
+  }, [isLinkInPath])
 
   const getLinkParticles = useCallback((link: any) => {
     const sourceId = String(typeof link.source === "object" ? link.source.id : link.source)
     const targetId = String(typeof link.target === "object" ? link.target.id : link.target)
 
-    const pathStr = highlightedPath.map(String)
-    const sourceIndex = pathStr.indexOf(sourceId)
-    const targetIndex = pathStr.indexOf(targetId)
-
-    if (sourceIndex !== -1 && targetIndex !== -1 && Math.abs(sourceIndex - targetIndex) === 1) {
+    if (isLinkInPath(sourceId, targetId)) {
       return 2 // Reduced particles for performance
     }
     return 0
-  }, [highlightedPath])
+  }, [isLinkInPath])
 
   const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const nodeRadius = Math.sqrt(Math.max((node.pagerank || 0.001) * 1000, 3)) * 6
@@ -234,14 +232,16 @@ export function NetworkGraph({
         }}
         onNodeDrag={(node: any) => {}}
         onNodeDragEnd={(node: any) => {}}
-        cooldownTicks={300}
-        d3AlphaDecay={0.005}
-        d3VelocityDecay={0.2}
-        d3AlphaMin={0.0005}
-        warmupTicks={0}
+        cooldownTicks={100}
+        d3AlphaDecay={0.02}
+        d3VelocityDecay={0.3}
+        d3AlphaMin={0.001}
+        warmupTicks={50}
         enableNodeDrag={true}
         enableZoomInteraction={true}
         enablePanInteraction={true}
+        minZoom={0.5}
+        maxZoom={8}
       />
     </div>
   )

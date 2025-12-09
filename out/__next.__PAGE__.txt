@@ -1,0 +1,9 @@
+1:"$Sreact.fragment"
+2:I[83694,["/Isnad-Network-Analysis/_next/static/chunks/88c4fefe8baf61a2.js"],"ClientPageRoot"]
+3:I[80019,["/Isnad-Network-Analysis/_next/static/chunks/f447c6733dfe2125.js","/Isnad-Network-Analysis/_next/static/chunks/87e3e06fdeb0054f.js","/Isnad-Network-Analysis/_next/static/chunks/b7638d2b66838b87.js"],"default"]
+6:I[31482,["/Isnad-Network-Analysis/_next/static/chunks/88c4fefe8baf61a2.js"],"OutletBoundary"]
+7:"$Sreact.suspense"
+0:{"buildId":"GlQcJBrGtb4kq5pxZ4BSN","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Isnad-Network-Analysis/_next/static/chunks/87e3e06fdeb0054f.js","async":true}],["$","script","script-1",{"src":"/Isnad-Network-Analysis/_next/static/chunks/b7638d2b66838b87.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
+4:{}
+5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
+8:null

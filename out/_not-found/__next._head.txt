@@ -1,0 +1,7 @@
+1:"$Sreact.fragment"
+2:I[31482,["/Isnad-Network-Analysis/_next/static/chunks/f447c6733dfe2125.js","/Isnad-Network-Analysis/_next/static/chunks/88c4fefe8baf61a2.js"],"ViewportBoundary"]
+4:I[31482,["/Isnad-Network-Analysis/_next/static/chunks/f447c6733dfe2125.js","/Isnad-Network-Analysis/_next/static/chunks/88c4fefe8baf61a2.js"],"MetadataBoundary"]
+5:"$Sreact.suspense"
+0:{"buildId":"GlQcJBrGtb4kq5pxZ4BSN","rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
+3:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+6:[["$","title","0",{"children":"Hadith Network Visualizer"}],["$","meta","1",{"name":"description","content":"Explore hadith transmission networks through interactive graph visualization"}],["$","meta","2",{"name":"generator","content":"v0.app"}]]

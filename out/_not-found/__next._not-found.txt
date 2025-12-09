@@ -1,0 +1,4 @@
+1:"$Sreact.fragment"
+2:I[59521,["/Isnad-Network-Analysis/_next/static/chunks/f447c6733dfe2125.js","/Isnad-Network-Analysis/_next/static/chunks/88c4fefe8baf61a2.js"],"default"]
+3:I[66740,["/Isnad-Network-Analysis/_next/static/chunks/f447c6733dfe2125.js","/Isnad-Network-Analysis/_next/static/chunks/88c4fefe8baf61a2.js"],"default"]
+0:{"buildId":"GlQcJBrGtb4kq5pxZ4BSN","rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"loading":null,"isPartial":false}

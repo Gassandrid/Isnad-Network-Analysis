@@ -57,9 +57,9 @@ export function HadithSearch({ hadiths, onSelectHadith }: HadithSearchProps) {
         </div>
 
         <div className="space-y-3 max-h-[400px] overflow-y-auto">
-          {filteredHadiths.map((hadith) => (
+          {filteredHadiths.map((hadith, index) => (
             <div
-              key={hadith.id}
+              key={`${hadith.source}-${hadith.hadith_id}-${index}`}
               className="p-3 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
               onClick={() => onSelectHadith(hadith)}
             >

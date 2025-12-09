@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { NetworkGraph } from "@/components/network-graph"
 import { NarratorPanel } from "@/components/narrator-panel"
 import { HadithSearch } from "@/components/hadith-search"
@@ -9,7 +9,7 @@ import { StatsPanel } from "@/components/stats-panel"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ForceControls } from "@/components/force-controls"
 import { mockNetworkData } from "@/lib/mock-data"
-import { loadNetworkData } from "@/lib/data-loader"
+import { loadNetworkData, loadHadithsData } from "@/lib/data-loader"
 import type { Narrator, Hadith, NetworkData, ForceConfig } from "@/types/network"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -21,11 +21,13 @@ export default function Page() {
   const [activeView, setActiveView] = useState<"network" | "search" | "stats">("network")
   const [networkData, setNetworkData] = useState<NetworkData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [hadithsLoading, setHadithsLoading] = useState(false)
+  const [hadithsLoaded, setHadithsLoaded] = useState(false)
   const [forceConfig, setForceConfig] = useState<ForceConfig>({
-    charge: -300,
-    linkDistance: 100,
-    centerStrength: 0.2,
-    collisionRadius: 20,
+    charge: -200,
+    linkDistance: 80,
+    centerStrength: 0.3,
+    collisionRadius: 15,
   })
 
   useEffect(() => {
@@ -44,6 +46,29 @@ export default function Page() {
         setIsLoading(false)
       })
   }, [])
+
+  // Lazy load hadiths when search tab is first accessed
+  const loadHadiths = useCallback(async () => {
+    if (hadithsLoaded || hadithsLoading || !networkData) return
+
+    setHadithsLoading(true)
+    try {
+      const hadiths = await loadHadithsData()
+      setNetworkData(prev => prev ? { ...prev, hadiths } : null)
+      setHadithsLoaded(true)
+    } catch (error) {
+      console.error("Failed to load hadiths:", error)
+    } finally {
+      setHadithsLoading(false)
+    }
+  }, [hadithsLoaded, hadithsLoading, networkData])
+
+  // Load hadiths when switching to search view
+  useEffect(() => {
+    if (activeView === "search" && !hadithsLoaded && !hadithsLoading) {
+      loadHadiths()
+    }
+  }, [activeView, hadithsLoaded, hadithsLoading, loadHadiths])
 
   const handleNarratorClick = (narrator: Narrator) => {
     setSelectedNarrator(narrator)
@@ -119,7 +144,14 @@ export default function Page() {
             <div className="flex-1 min-h-0 overflow-hidden">
               {activeView === "search" && (
                 <ScrollArea className="h-full">
-                  <HadithSearch hadiths={networkData.hadiths} onSelectHadith={handleHadithSelect} />
+                  {hadithsLoading ? (
+                    <div className="p-6 text-center space-y-4">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm text-muted-foreground">Loading hadith database...</p>
+                    </div>
+                  ) : (
+                    <HadithSearch hadiths={networkData.hadiths} onSelectHadith={handleHadithSelect} />
+                  )}
                 </ScrollArea>
               )}
 
